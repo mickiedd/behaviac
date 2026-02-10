@@ -97,7 +97,7 @@ enum class EBehaviacFileFormat : uint8
 };
 
 /** Invalid node ID constant. */
-static constexpr uint16 BEHAVIAC_INVALID_NODE_ID = static_cast<uint16>(-2);
+static constexpr int32 BEHAVIAC_INVALID_NODE_ID = -2;
 
 /** Property container used during node loading. */
 USTRUCT(BlueprintType)

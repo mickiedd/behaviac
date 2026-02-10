@@ -19,7 +19,7 @@ void UBehaviacBehaviorNode::LoadFromProperties(int32 Version, const FString& InA
 	{
 		if (Prop.Name == TEXT("Id"))
 		{
-			NodeId = static_cast<uint16>(FCString::Atoi(*Prop.Value));
+			NodeId = FCString::Atoi(*Prop.Value);
 		}
 	}
 }

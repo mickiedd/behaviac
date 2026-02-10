@@ -29,7 +29,7 @@ public:
 
 	/** Unique node ID within the tree */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Behaviac|Node")
-	uint16 NodeId;
+	int32 NodeId;
 
 	/** Human-readable class name for serialization */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Behaviac|Node")
