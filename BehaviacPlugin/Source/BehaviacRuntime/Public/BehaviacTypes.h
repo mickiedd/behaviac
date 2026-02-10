@@ -93,7 +93,6 @@ enum class EBehaviacFileFormat : uint8
 {
 	XML,
 	BSON,
-	CPP,
 };
 
 /** Invalid node ID constant. */
