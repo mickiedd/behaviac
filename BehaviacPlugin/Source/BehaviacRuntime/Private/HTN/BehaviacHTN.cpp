@@ -1,5 +1,5 @@
-// Copyright (C) 2015-2017 THL A29 Limited, a Tencent company.
-// Licensed under the BSD 3-Clause License. UE5 plugin port.
+// Behaviac UE5 Plugin
+// Licensed under the BSD 3-Clause License.
 
 #include "HTN/BehaviacHTN.h"
 #include "BehaviacAgent.h"

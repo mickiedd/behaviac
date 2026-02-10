@@ -1,6 +1,6 @@
 # Behaviac UE5 Plugin
 
-A comprehensive Unreal Engine 5 plugin for game AI, supporting **Behavior Trees**, **Finite State Machines (FSM)**, and **Hierarchical Task Networks (HTN)**. Ported from [Tencent's behaviac](https://github.com/Tencent/behaviac) framework (v3.6.39, BSD 3-Clause License).
+A comprehensive Unreal Engine 5 plugin for game AI, supporting **Behavior Trees**, **Finite State Machines (FSM)**, and **Hierarchical Task Networks (HTN)**.
 
 ## Features
 
@@ -91,4 +91,4 @@ The plugin includes an XML import factory. In the Content Browser:
 
 ## License
 
-BSD 3-Clause License. See the original [behaviac license](https://github.com/Tencent/behaviac/blob/master/license.txt).
+BSD 3-Clause License.
