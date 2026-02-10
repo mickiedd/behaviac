@@ -1,0 +1,328 @@
+// Behaviac UE5 Plugin
+// Licensed under the BSD 3-Clause License.
+
+#include "BehaviorTree/BehaviacBehaviorTask.h"
+#include "BehaviorTree/BehaviacBehaviorNode.h"
+#include "BehaviorTree/Attachments/BehaviacAttachment.h"
+#include "BehaviacAgent.h"
+
+// ===================================================================
+// UBehaviacBehaviorTask
+// ===================================================================
+
+UBehaviacBehaviorTask::UBehaviacBehaviorTask()
+	: Node(nullptr)
+	, Status(EBehaviacStatus::Invalid)
+	, ParentTask(nullptr)
+	, bHasEntered(false)
+{
+}
+
+void UBehaviacBehaviorTask::Init(UBehaviacBehaviorNode* InNode)
+{
+	Node = InNode;
+	Status = EBehaviacStatus::Invalid;
+}
+
+EBehaviacStatus UBehaviacBehaviorTask::Execute(UBehaviacAgentComponent* Agent, EBehaviacStatus ChildStatus)
+{
+	if (!Node || !Node->IsValid(Agent, this))
+	{
+		return EBehaviacStatus::Failure;
+	}
+
+	EBehaviacStatus Result = EBehaviacStatus::Running;
+
+	// Enter phase
+	if (!bHasEntered)
+	{
+		// Check enter preconditions
+		if (!CheckPreconditions(Agent, false))
+		{
+			return EBehaviacStatus::Failure;
+		}
+
+		bHasEntered = true;
+
+		if (!OnEnter(Agent))
+		{
+			bHasEntered = false;
+			return EBehaviacStatus::Failure;
+		}
+	}
+
+	// Check update preconditions
+	if (!CheckPreconditions(Agent, true))
+	{
+		Result = EBehaviacStatus::Failure;
+	}
+	else
+	{
+		Result = UpdateCurrent(Agent, ChildStatus);
+	}
+
+	// Exit phase
+	if (Result != EBehaviacStatus::Running)
+	{
+		ApplyEffectors(Agent, Result);
+		OnExit(Agent, Result);
+		bHasEntered = false;
+		Status = Result;
+	}
+	else
+	{
+		Status = EBehaviacStatus::Running;
+	}
+
+	return Result;
+}
+
+void UBehaviacBehaviorTask::Reset(UBehaviacAgentComponent* Agent)
+{
+	Status = EBehaviacStatus::Invalid;
+	bHasEntered = false;
+}
+
+void UBehaviacBehaviorTask::Traverse(bool bChildFirst, TFunction<bool(UBehaviacBehaviorTask*)> Handler)
+{
+	Handler(this);
+}
+
+bool UBehaviacBehaviorTask::OnEnter(UBehaviacAgentComponent* Agent)
+{
+	return true;
+}
+
+void UBehaviacBehaviorTask::OnExit(UBehaviacAgentComponent* Agent, EBehaviacStatus InStatus)
+{
+}
+
+EBehaviacStatus UBehaviacBehaviorTask::OnUpdate(UBehaviacAgentComponent* Agent, EBehaviacStatus ChildStatus)
+{
+	return EBehaviacStatus::Success;
+}
+
+EBehaviacStatus UBehaviacBehaviorTask::UpdateCurrent(UBehaviacAgentComponent* Agent, EBehaviacStatus ChildStatus)
+{
+	return OnUpdate(Agent, ChildStatus);
+}
+
+bool UBehaviacBehaviorTask::CheckPreconditions(UBehaviacAgentComponent* Agent, bool bIsUpdate) const
+{
+	if (!Node)
+	{
+		return true;
+	}
+
+	for (UBehaviacAttachment* Precondition : Node->Preconditions)
+	{
+		if (!Precondition)
+		{
+			continue;
+		}
+
+		// Check if this precondition applies to the current phase
+		if (!Precondition->AppliesToPhase(bIsUpdate ? EBehaviacPreconditionPhase::Update : EBehaviacPreconditionPhase::Enter))
+		{
+			continue;
+		}
+
+		if (!Precondition->Evaluate(Agent))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void UBehaviacBehaviorTask::ApplyEffectors(UBehaviacAgentComponent* Agent, EBehaviacStatus InStatus) const
+{
+	if (!Node)
+	{
+		return;
+	}
+
+	for (UBehaviacAttachment* Effector : Node->Effectors)
+	{
+		if (!Effector)
+		{
+			continue;
+		}
+
+		const bool bApplyOnSuccess = (InStatus == EBehaviacStatus::Success);
+		Effector->Apply(Agent, bApplyOnSuccess);
+	}
+}
+
+// ===================================================================
+// UBehaviacCompositeTask
+// ===================================================================
+
+UBehaviacCompositeTask::UBehaviacCompositeTask()
+	: ActiveChildIndex(0)
+{
+}
+
+void UBehaviacCompositeTask::Init(UBehaviacBehaviorNode* InNode)
+{
+	Super::Init(InNode);
+	ActiveChildIndex = 0;
+
+	if (InNode)
+	{
+		ChildTasks.Empty();
+		ChildTasks.Reserve(InNode->GetChildCount());
+
+		for (int32 i = 0; i < InNode->GetChildCount(); i++)
+		{
+			UBehaviacBehaviorNode* ChildNode = InNode->GetChild(i);
+			if (ChildNode)
+			{
+				UBehaviacBehaviorTask* ChildTask = ChildNode->CreateTask(this);
+				if (ChildTask)
+				{
+					ChildTask->Init(ChildNode);
+					ChildTask->SetParentTask(this);
+					ChildTasks.Add(ChildTask);
+				}
+			}
+		}
+	}
+}
+
+void UBehaviacCompositeTask::Reset(UBehaviacAgentComponent* Agent)
+{
+	Super::Reset(Agent);
+	ActiveChildIndex = 0;
+
+	for (UBehaviacBehaviorTask* ChildTask : ChildTasks)
+	{
+		if (ChildTask)
+		{
+			ChildTask->Reset(Agent);
+		}
+	}
+}
+
+void UBehaviacCompositeTask::Traverse(bool bChildFirst, TFunction<bool(UBehaviacBehaviorTask*)> Handler)
+{
+	if (!bChildFirst)
+	{
+		if (!Handler(this))
+		{
+			return;
+		}
+	}
+
+	for (UBehaviacBehaviorTask* ChildTask : ChildTasks)
+	{
+		if (ChildTask)
+		{
+			ChildTask->Traverse(bChildFirst, Handler);
+		}
+	}
+
+	if (bChildFirst)
+	{
+		Handler(this);
+	}
+}
+
+// ===================================================================
+// UBehaviacSingleChildTask
+// ===================================================================
+
+UBehaviacSingleChildTask::UBehaviacSingleChildTask()
+	: ChildTask(nullptr)
+{
+}
+
+void UBehaviacSingleChildTask::Init(UBehaviacBehaviorNode* InNode)
+{
+	Super::Init(InNode);
+
+	if (InNode && InNode->GetChildCount() > 0)
+	{
+		UBehaviacBehaviorNode* ChildNode = InNode->GetChild(0);
+		if (ChildNode)
+		{
+			ChildTask = ChildNode->CreateTask(this);
+			if (ChildTask)
+			{
+				ChildTask->Init(ChildNode);
+				ChildTask->SetParentTask(this);
+			}
+		}
+	}
+}
+
+void UBehaviacSingleChildTask::Reset(UBehaviacAgentComponent* Agent)
+{
+	Super::Reset(Agent);
+	if (ChildTask)
+	{
+		ChildTask->Reset(Agent);
+	}
+}
+
+void UBehaviacSingleChildTask::Traverse(bool bChildFirst, TFunction<bool(UBehaviacBehaviorTask*)> Handler)
+{
+	if (!bChildFirst)
+	{
+		if (!Handler(this))
+		{
+			return;
+		}
+	}
+
+	if (ChildTask)
+	{
+		ChildTask->Traverse(bChildFirst, Handler);
+	}
+
+	if (bChildFirst)
+	{
+		Handler(this);
+	}
+}
+
+EBehaviacStatus UBehaviacSingleChildTask::UpdateCurrent(UBehaviacAgentComponent* Agent, EBehaviacStatus ChildStatus)
+{
+	if (ChildTask)
+	{
+		EBehaviacStatus Result = ChildTask->Execute(Agent, ChildStatus);
+		return Result;
+	}
+
+	return EBehaviacStatus::Failure;
+}
+
+// ===================================================================
+// UBehaviacBehaviorTreeTask
+// ===================================================================
+
+EBehaviacStatus UBehaviacBehaviorTreeTask::Tick(UBehaviacAgentComponent* Agent)
+{
+	return Execute(Agent, EBehaviacStatus::Running);
+}
+
+bool UBehaviacBehaviorTreeTask::OnEnter(UBehaviacAgentComponent* Agent)
+{
+	return true;
+}
+
+void UBehaviacBehaviorTreeTask::OnExit(UBehaviacAgentComponent* Agent, EBehaviacStatus InStatus)
+{
+	Super::OnExit(Agent, InStatus);
+}
+
+EBehaviacStatus UBehaviacBehaviorTreeTask::OnUpdate(UBehaviacAgentComponent* Agent, EBehaviacStatus ChildStatus)
+{
+	if (ChildTask)
+	{
+		return ChildTask->Execute(Agent, ChildStatus);
+	}
+
+	return EBehaviacStatus::Failure;
+}
