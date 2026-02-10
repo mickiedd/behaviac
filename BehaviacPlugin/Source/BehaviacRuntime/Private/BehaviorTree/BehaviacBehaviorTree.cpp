@@ -10,7 +10,7 @@
 #include "BehaviorTree/Attachments/BehaviacAttachment.h"
 #include "FSM/BehaviacFSM.h"
 #include "Misc/FileHelper.h"
-#include "XmlParser/Public/XmlFile.h"
+#include "XmlFile.h"
 
 UBehaviacBehaviorTree::UBehaviacBehaviorTree()
 	: RootNode(nullptr)
