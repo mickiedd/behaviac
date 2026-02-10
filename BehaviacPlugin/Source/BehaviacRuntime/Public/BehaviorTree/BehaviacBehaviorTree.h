@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "BehaviacTypes.h"
 #include "BehaviacBehaviorTree.generated.h"
 
