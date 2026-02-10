@@ -1,5 +1,6 @@
 # Generated files
 build/cmake_binary/**
+build_test/
 lib/**
 **/bin/
 **/obj/

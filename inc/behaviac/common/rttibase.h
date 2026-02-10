@@ -107,6 +107,10 @@ namespace behaviac {
             return GetHierarchyInfo()->m_szCassTypeName;
         }
 
+        static const CLayerInfo* EnsureHierarchyInit_() {
+            return NULL;
+        }
+
         static CRTTIBase* DynamicCast(CRTTIBase* other) {
             return other;
         }
@@ -335,24 +339,28 @@ namespace behaviac {
     } \
     public: \
     typedef __parent super; \
-    virtual BEHAVIAC_FORCEINLINE const CRTTIBase::CLayerInfo* GetHierarchyInfo() const \
+    static const CRTTIBase::CLayerInfo* EnsureHierarchyInit_() \
     { \
         CRTTIBase::TLayerInfoDecl< sm_HierarchyLevel >* decl = GetClassHierarchyInfoDecl(); \
         if (!decl->m_szCassTypeName) decl->InitClassLayerInfo( \
-                                                                   __type::GetClassTypeName(), __parent::GetHierarchyInfo()); \
+                                                                   __type::GetClassTypeName(), __parent::EnsureHierarchyInit_()); \
         return (const CRTTIBase::CLayerInfo*)decl; \
+    } \
+    virtual BEHAVIAC_FORCEINLINE const CRTTIBase::CLayerInfo* GetHierarchyInfo() const \
+    { \
+        return __type::EnsureHierarchyInit_(); \
     } \
     static /*BEHAVIAC_FORCEINLINE*/ const behaviac::CStringCRC& GetClassTypeId() \
     { \
         CRTTIBase::TLayerInfoDecl< sm_HierarchyLevel >* decl = GetClassHierarchyInfoDecl(); \
-        if (!decl->m_szCassTypeName) ((const __type*)NULL)->__type::GetHierarchyInfo(); \
+        if (!decl->m_szCassTypeName) __type::EnsureHierarchyInit_(); \
         const behaviac::CStringCRC* pTargetHierarchy = (const behaviac::CStringCRC*)((const CRTTIBase::CLayerInfo*)decl)->m_hierarchy;\
         return pTargetHierarchy[__type::sm_HierarchyLevel - 1]; \
     } \
     static bool IsClassAKindOf(const behaviac::CStringCRC& typeId) \
     { \
         const CRTTIBase::TLayerInfoDecl< sm_HierarchyLevel >* decl = GetClassHierarchyInfoDecl(); \
-        if (!decl->m_szCassTypeName) ((const __type*)NULL)->__type::GetHierarchyInfo(); \
+        if (!decl->m_szCassTypeName) __type::EnsureHierarchyInit_(); \
         for(uint32_t i = 0; i < sm_HierarchyLevel; ++i) \
         { \
             const behaviac::CStringCRC* pTargetHierarchy = (const behaviac::CStringCRC*)((const CRTTIBase::CLayerInfo*)decl)->m_hierarchy;\

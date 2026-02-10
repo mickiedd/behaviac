@@ -208,7 +208,11 @@ int listfiles_readfile(const listfiles_dir_t* pDir, listfiles_file_t* pFile) {
                       pDir->_e->d_name
 #endif
                      );
-    _listfiles_strcat(pFile->path, pFile->name);
+    {
+        size_t pathLen = _listfiles_strlen(pFile->path);
+        size_t nameLen = _listfiles_strlen(pFile->name);
+        memcpy(pFile->path + pathLen, pFile->name, nameLen + 1);
+    }
 #ifndef _MSC_VER
     if (stat(
             pFile->path, &pFile->_s) == -1) {

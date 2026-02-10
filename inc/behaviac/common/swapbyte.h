@@ -158,7 +158,7 @@ namespace behaviac {
 namespace behaviac {
     template< typename SWAPPER, typename T >
     inline void SwapByteSizedImplement(T& t) {
-        SWAPPER::SwapSized< sizeof(t) >((char*)&t);
+        SWAPPER::template SwapSized< sizeof(t) >((char*)&t);
     }
 
     template< typename SWAPPER, typename T >

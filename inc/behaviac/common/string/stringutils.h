@@ -65,7 +65,9 @@ namespace behaviac {
         inline void StringCopySafe(int destMax, char* dest, const char* src) {
 			int len = (int)::strlen(src);
             BEHAVIAC_ASSERT(len < destMax);
-            strncpy(dest, src, len);
+            if (len > 0) {
+                memcpy(dest, src, (size_t)len);
+            }
             dest[len] = 0;
         }
 
